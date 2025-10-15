@@ -1,80 +1,92 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { Calendar, MapPin, ArrowRight } from "lucide-react";
+import { useWordPressPosts, useWordPressTaxonomy } from "@/hooks/use-wordpress";
+import { decodeHtml } from "@/lib/utils";
+import type { WPPost } from "@/types/wordpress";
 
-// Mock data
-const mockNews = [
-  {
-    id: 1,
-    title: "Podium Finish in Rotax Max Challenge Nederland",
-    slug: "podium-rotax-max-challenge-2024",
-    excerpt: "Fantastisch weekend in Lelystad met een 2e plaats in de finale!",
-    date: "2024-10-15",
-    year: 2024,
-    circuit: "Raceway Lelystad",
-    competitie: "Rotax Max Challenge",
-    position: 2,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 2,
-    title: "Seizoensopener IAME X30 Challenge",
-    slug: "seizoensopener-iame-x30-2024",
-    excerpt: "Start van het seizoen met een goede 5e plaats ondanks technische problemen.",
-    date: "2024-09-20",
-    year: 2024,
-    circuit: "Circuit Zandvoort",
-    competitie: "IAME X30 Challenge",
-    position: 5,
-    image: "/placeholder.svg",
-  },
-  {
-    id: 3,
-    title: "Overwinning in ONK Karting",
-    slug: "overwinning-onk-karting-2024",
-    excerpt: "Pole position en racewinst! Een perfecte dag op het circuit.",
-    date: "2024-08-12",
-    year: 2024,
-    circuit: "Kartcircuit Berghem",
-    competitie: "ONK Karting",
-    position: 1,
-    image: "/placeholder.svg",
-  },
-];
+const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "");
+
+const getPositionBadge = (position: number | null | undefined) => {
+  if (!position) return null;
+
+  const colors = {
+    1: "bg-yellow-500 text-black",
+    2: "bg-gray-300 text-black",
+    3: "bg-orange-600 text-white",
+  } as const;
+
+  return (
+    <div
+      className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${
+        colors[position as keyof typeof colors] || "bg-muted text-foreground"
+      }`}
+    >
+      {position}
+    </div>
+  );
+};
 
 const Nieuws = () => {
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
-  const [selectedCompetition, setSelectedCompetition] = useState<string | null>(null);
+  const [selectedCompetition, setSelectedCompetition] = useState<number | null>(null);
 
-  const years = [...new Set(mockNews.map((n) => n.year))].sort((a, b) => b - a);
-  const competitions = [...new Set(mockNews.map((n) => n.competitie))];
-
-  const filteredNews = mockNews.filter((article) => {
-    if (selectedYear && article.year !== selectedYear) return false;
-    if (selectedCompetition && article.competitie !== selectedCompetition) return false;
-    return true;
+  const { data: postsData, isLoading, isError } = useWordPressPosts({
+    per_page: 100,
+    order: "desc",
+    orderby: "date",
+    _embed: true,
   });
 
-  const getPositionBadge = (position: number) => {
-    const colors = {
-      1: "bg-yellow-500 text-black",
-      2: "bg-gray-300 text-black",
-      3: "bg-orange-600 text-white",
-    };
+  const { data: competitionsData } = useWordPressTaxonomy("competities", {
+    per_page: 100,
+    order: "asc",
+    orderby: "name",
+  });
 
-    return (
-      <div
-        className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-bold ${
-          colors[position as keyof typeof colors] || "bg-muted text-foreground"
-        }`}
-      >
-        {position}
-      </div>
-    );
+  const posts = postsData?.items ?? [];
+  const competitions = competitionsData?.items ?? [];
+
+  const competitionMap = useMemo(() => {
+    return new Map(competitions.map((competition) => [competition.id, competition]));
+  }, [competitions]);
+
+  const years = useMemo(() => {
+    const uniqueYears = new Set<number>();
+    posts.forEach((post) => {
+      const year = new Date(post.date).getFullYear();
+      if (!Number.isNaN(year)) {
+        uniqueYears.add(year);
+      }
+    });
+    return Array.from(uniqueYears).sort((a, b) => b - a);
+  }, [posts]);
+
+  const filteredNews = useMemo(() => {
+    return posts.filter((post) => {
+      const postYear = new Date(post.date).getFullYear();
+      if (selectedYear && postYear !== selectedYear) return false;
+
+      if (selectedCompetition) {
+        const competitionIds = post.competitie ?? [];
+        if (!competitionIds.includes(selectedCompetition)) return false;
+      }
+
+      return true;
+    });
+  }, [posts, selectedYear, selectedCompetition]);
+
+  const getCompetitionLabel = (post: WPPost) => {
+    const competitionIds = post.competitie ?? [];
+    for (const id of competitionIds) {
+      const term = competitionMap.get(id);
+      if (term) return term.name;
+    }
+    return "";
   };
 
   return (
@@ -123,15 +135,27 @@ const Nieuws = () => {
             </Button>
             {competitions.map((comp) => (
               <Button
-                key={comp}
-                variant={selectedCompetition === comp ? "default" : "outline"}
-                onClick={() => setSelectedCompetition(comp)}
-                className={selectedCompetition === comp ? "gradient-orange" : ""}
+                key={comp.id}
+                variant={selectedCompetition === comp.id ? "default" : "outline"}
+                onClick={() => setSelectedCompetition(comp.id)}
+                className={selectedCompetition === comp.id ? "gradient-orange" : ""}
               >
-                {comp}
+                {comp.name}
               </Button>
             ))}
           </div>
+
+          {isLoading && (
+            <div className="text-center py-20">
+              <p className="text-muted-foreground text-lg">Nieuws items worden geladen...</p>
+            </div>
+          )}
+
+          {isError && !isLoading && (
+            <div className="text-center py-20">
+              <p className="text-destructive text-lg">Er ging iets mis bij het laden van de nieuwsberichten.</p>
+            </div>
+          )}
 
           {/* Articles Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -140,15 +164,15 @@ const Nieuws = () => {
                 key={article.id}
                 className="group hover:shadow-orange transition-smooth hover-lift overflow-hidden"
               >
-                <Link to={`/nieuws/${article.year}/${article.slug}`}>
+                <Link to={`/nieuws/${new Date(article.date).getFullYear()}/${article.slug}`}>
                   <div className="aspect-video bg-muted relative overflow-hidden">
                     <img
-                      src={article.image}
-                      alt={article.title}
+                      src={article.featured_image_url || "/placeholder.svg"}
+                      alt={article.title.rendered}
                       className="w-full h-full object-cover group-hover:scale-105 transition-smooth"
                     />
                     <div className="absolute top-4 right-4">
-                      {getPositionBadge(article.position)}
+                      {getPositionBadge(article.meta.positie ?? null)}
                     </div>
                   </div>
                   <CardContent className="p-6 space-y-4">
@@ -164,16 +188,16 @@ const Nieuws = () => {
                     </div>
                     <div className="flex items-start gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                      <span>{article.circuit}</span>
+                      <span>{article.meta.circuit || "Onbekend Circuit"}</span>
                     </div>
                     <div className="text-xs font-medium text-primary">
-                      {article.competitie}
+                      {getCompetitionLabel(article) || ""}
                     </div>
                     <h3 className="font-headline font-semibold text-xl group-hover:text-primary transition-smooth">
-                      {article.title}
+                      {decodeHtml(article.title.rendered)}
                     </h3>
                     <p className="text-muted-foreground line-clamp-2">
-                      {article.excerpt}
+                      {decodeHtml(stripHtml(article.excerpt.rendered))}
                     </p>
                     <div className="pt-2">
                       <span className="text-primary font-medium inline-flex items-center gap-2 group-hover:gap-3 transition-smooth">
@@ -187,7 +211,7 @@ const Nieuws = () => {
             ))}
           </div>
 
-          {filteredNews.length === 0 && (
+          {!isLoading && filteredNews.length === 0 && (
             <div className="text-center py-20">
               <p className="text-muted-foreground text-lg">
                 Geen verslagen gevonden met de geselecteerde filters.

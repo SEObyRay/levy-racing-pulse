@@ -1,0 +1,116 @@
+import { useMemo } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { Button } from "@/components/ui/button";
+import { Calendar, MapPin, ArrowLeft, Trophy } from "lucide-react";
+import { decodeHtml } from "@/lib/utils";
+import { useWordPressPostBySlug } from "@/hooks/use-wordpress";
+import type { WPPost } from "@/types/wordpress";
+
+const extractFeaturedImage = (post: WPPost | null) => {
+  if (!post?._embedded) return null;
+  const media = (post._embedded["wp:featuredmedia"] as any)?.[0];
+  return media?.source_url || null;
+};
+
+const formatDate = (date?: string) => {
+  if (!date) return "Onbekende datum";
+  return new Date(date).toLocaleDateString("nl-NL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+};
+
+const extractTerms = (post: WPPost | null) => {
+  if (!post?._embedded) return { competition: "", season: "" };
+  const terms = post._embedded["wp:term"] as any[] | undefined;
+  if (!terms) return { competition: "", season: "" };
+
+  const flatTerms = terms.flat() as Array<{ taxonomy?: string; name?: string }>;
+  const competition = flatTerms.find((term) => term.taxonomy === "competitie")?.name ?? "";
+  const season = flatTerms.find((term) => term.taxonomy === "seizoen")?.name ?? "";
+  return { competition, season };
+};
+
+const NieuwsDetail = () => {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+
+  const { data: post, isLoading, isError } = useWordPressPostBySlug(slug ?? "");
+
+  const featuredImage = useMemo(() => extractFeaturedImage(post), [post]);
+  const { competition, season } = useMemo(() => extractTerms(post), [post]);
+
+  const circuit = post?.meta?.circuit ? decodeHtml(post.meta.circuit) : "Onbekend circuit";
+  const position = post?.meta?.positie ? Number(post.meta.positie) : null;
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <main className="pt-28 pb-20">
+        <div className="container mx-auto px-4 max-w-4xl">
+          <Button variant="ghost" className="mb-6 gap-2" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4" /> Terug
+          </Button>
+
+          {isLoading && <div className="text-muted-foreground">Artikel wordt geladen...</div>}
+          {isError && !isLoading && (
+            <div className="text-destructive">Kon het artikel niet ophalen. Probeer later opnieuw.</div>
+          )}
+
+          {!isLoading && !post && !isError && (
+            <div className="text-muted-foreground">Artikel niet gevonden.</div>
+          )}
+
+          {post && (
+            <article className="space-y-10">
+              <header className="space-y-4">
+                <div className="space-y-2">
+                  <span className="text-sm uppercase tracking-wide text-primary/80">{season || "Seizoen"}</span>
+                  <h1 className="text-4xl md:text-5xl font-headline font-bold">
+                    {decodeHtml(post.title.rendered)}
+                  </h1>
+                </div>
+
+                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    {formatDate(post.date)}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="w-4 h-4" />
+                    {circuit}
+                  </div>
+                  {competition && <span>{competition}</span>}
+                </div>
+
+                {featuredImage && (
+                  <div className="overflow-hidden rounded-3xl border border-border">
+                    <img
+                      src={featuredImage}
+                      alt={decodeHtml(post.title.rendered)}
+                      className="w-full h-auto object-cover"
+                    />
+                  </div>
+                )}
+              </header>
+
+              {position && (
+                <div className="flex items-center gap-2 text-lg font-semibold text-primary">
+                  <Trophy className="w-5 h-5" /> Positie: {position}
+                </div>
+              )}
+
+              <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: post.content.rendered }} />
+            </article>
+          )}
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+};
+
+export default NieuwsDetail;
