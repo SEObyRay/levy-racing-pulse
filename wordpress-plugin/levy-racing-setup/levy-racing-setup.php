@@ -3,7 +3,7 @@
  * Plugin Name: Levy Racing Auto Setup
  * Plugin URI: https://levyracing.nl
  * Description: Automatische configuratie voor Levy Racing backend - Custom Post Types, Taxonomieën, en REST API setup
- * Version: 1.1.1
+ * Version: 1.2.0
  * Author: Ray Gritter
  * Author URI: https://seobyray.com
  * Text Domain: levy-racing-setup
@@ -16,7 +16,7 @@ if (!defined('ABSPATH')) {
 }
 
 // Define plugin constants
-define('LEVY_RACING_VERSION', '1.1.1');
+define('LEVY_RACING_VERSION', '1.2.0');
 define('LEVY_RACING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('LEVY_RACING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -57,6 +57,7 @@ class Levy_Racing_Setup {
     public function activate() {
         // Register post types and taxonomies
         $this->register_evenementen_post_type();
+        $this->register_sponsors_post_type();
         $this->register_taxonomies();
         
         // Flush rewrite rules
@@ -81,6 +82,7 @@ class Levy_Racing_Setup {
     public function init() {
         // Register post types
         $this->register_evenementen_post_type();
+        $this->register_sponsors_post_type();
         
         // Register taxonomies
         $this->register_taxonomies();
@@ -133,6 +135,49 @@ class Levy_Racing_Setup {
         );
         
         register_post_type('evenement', $args);
+    }
+
+    /**
+     * Register Sponsors Custom Post Type
+     */
+    public function register_sponsors_post_type() {
+        $labels = array(
+            'name'                  => 'Sponsors',
+            'singular_name'         => 'Sponsor',
+            'menu_name'             => 'Sponsors',
+            'name_admin_bar'        => 'Sponsor',
+            'add_new'               => 'Nieuwe toevoegen',
+            'add_new_item'          => 'Nieuwe Sponsor Toevoegen',
+            'new_item'              => 'Nieuwe Sponsor',
+            'edit_item'             => 'Sponsor Bewerken',
+            'view_item'             => 'Sponsor Bekijken',
+            'all_items'             => 'Alle Sponsors',
+            'search_items'          => 'Sponsors Zoeken',
+            'not_found'             => 'Geen sponsors gevonden.',
+            'not_found_in_trash'    => 'Geen sponsors gevonden in prullenbak.',
+        );
+
+        $args = array(
+            'labels'                => $labels,
+            'description'           => 'Sponsor partners en logo’s',
+            'public'                => true,
+            'publicly_queryable'    => true,
+            'show_ui'               => true,
+            'show_in_menu'          => true,
+            'query_var'             => true,
+            'rewrite'               => array('slug' => 'sponsor'),
+            'capability_type'       => 'post',
+            'has_archive'           => true,
+            'hierarchical'          => false,
+            'menu_position'         => 6,
+            'menu_icon'             => 'dashicons-megaphone',
+            'supports'              => array('title', 'editor', 'thumbnail', 'excerpt'),
+            'show_in_rest'          => true,
+            'rest_base'             => 'sponsors',
+            'rest_controller_class' => 'WP_REST_Posts_Controller',
+        );
+
+        register_post_type('sponsor', $args);
     }
     
     /**
@@ -283,6 +328,38 @@ class Levy_Racing_Setup {
         foreach ($post_fields as $key => $args) {
             register_post_meta('post', $key, $args);
         }
+
+        // Sponsors Meta Fields
+        $sponsor_fields = array(
+            'website' => array(
+                'type'         => 'string',
+                'description'  => 'Website URL van de sponsor',
+                'single'       => true,
+                'show_in_rest' => true,
+            ),
+            'tier' => array(
+                'type'         => 'string',
+                'description'  => 'Tier of sponsorniveau (bijv. main, secondary, partner)',
+                'single'       => true,
+                'show_in_rest' => true,
+            ),
+            'priority' => array(
+                'type'         => 'integer',
+                'description'  => 'Sorteervolgorde (lage waarde = hoger)',
+                'single'       => true,
+                'show_in_rest' => true,
+            ),
+            'active' => array(
+                'type'         => 'boolean',
+                'description'  => 'Actieve sponsor',
+                'single'       => true,
+                'show_in_rest' => true,
+            ),
+        );
+
+        foreach ($sponsor_fields as $key => $args) {
+            register_post_meta('sponsor', $key, $args);
+        }
     }
     
     /**
@@ -291,7 +368,7 @@ class Levy_Racing_Setup {
     public function register_custom_rest_fields() {
         // Add featured image URL to posts
         register_rest_field(
-            array('post', 'evenement'),
+            array('post', 'evenement', 'sponsor'),
             'featured_image_url',
             array(
                 'get_callback' => function($object) {
