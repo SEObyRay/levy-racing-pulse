@@ -8,6 +8,8 @@ import { Calendar, MapPin, Clock, Download } from "lucide-react";
 import { useWordPressEvents } from "@/hooks/use-wordpress";
 import { decodeHtml } from "@/lib/utils";
 import type { WPEvent } from "@/types/wordpress";
+import PageSeo from "@/components/seo/PageSeo";
+import { buildCanonical } from "@/lib/seo";
 
 type AgendaEvent = {
   id: number;
@@ -92,8 +94,39 @@ const Agenda = () => {
       .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   }, [events]);
 
+  const eventsJsonLd = useMemo(() => {
+    return events.slice(0, 20).map((event) => {
+      const startDateIso = new Date(event.startDate).toISOString();
+      const endDateIso = event.endDate ? new Date(event.endDate).toISOString() : undefined;
+      const location = event.venue || event.address || event.city;
+      return {
+        "@context": "https://schema.org",
+        "@type": "SportsEvent",
+        name: event.title,
+        startDate: startDateIso,
+        endDate: endDateIso,
+        eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+        eventStatus: "https://schema.org/EventScheduled",
+        location: location
+          ? {
+              "@type": "Place",
+              name: event.venue || location,
+              address: event.address || event.city || "",
+            }
+          : undefined,
+        url: buildCanonical(`/agenda/${new Date(event.startDate).getFullYear()}/${event.slug}`),
+      };
+    });
+  }, [events]);
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Race Agenda | Levy Opbergen"
+        description="Bekijk alle aankomende en afgelopen races van Levy Opbergen inclusief locaties, tijden en klasses."
+        path="/agenda"
+        jsonLd={eventsJsonLd}
+      />
       <Header />
       <main className="pt-32 pb-20">
         <div className="container mx-auto px-4">

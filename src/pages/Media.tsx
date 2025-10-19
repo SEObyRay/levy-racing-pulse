@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Video, Camera, Newspaper, Instagram } from "lucide-react";
+import PageSeo from "@/components/seo/PageSeo";
 
 const mediaKits = [
   {
@@ -38,6 +39,11 @@ const mediaKits = [
 const Media = () => {
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Media & Pers | Levy Opbergen"
+        description="Download perskits, foto’s, video’s en social media assets van kartcoureur Levy Opbergen."
+        path="/media"
+      />
       <Header />
       <main className="pt-32 pb-24">
         <div className="container mx-auto px-4 max-w-5xl space-y-16">

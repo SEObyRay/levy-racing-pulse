@@ -65,11 +65,11 @@ export default function NotFound() {
                 Naar homepagina
               </Link>
             </Button>
-            <Button asChild variant="outline" className="gap-2" onClick={() => window.history.back()}>
-              <a href="#">
+            <Button asChild variant="outline" className="gap-2">
+              <Link href="/">
                 <ArrowLeft className="w-4 h-4" />
                 Ga terug
-              </a>
+              </Link>
             </Button>
           </div>
         </div>

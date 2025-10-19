@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar, MapPin, Trophy, Compass, Target } from "lucide-react";
+import PageSeo from "@/components/seo/PageSeo";
+import { SITE_URL } from "@/lib/seo";
 
 const highlightItems = [
   {
@@ -66,8 +68,34 @@ const circuits = [
 ];
 
 const OverLevy = () => {
+  const aboutJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "AboutPage",
+    name: "Over Levy Opbergen",
+    url: `${SITE_URL}/over-levy`,
+    mainEntity: {
+      "@type": "Person",
+      name: "Levy Opbergen",
+      birthDate: "2017",
+      jobTitle: "Kartcoureur",
+      description:
+        "Levy Opbergen is een karttalent van acht jaar dat actief is in Europese competities en werkt aan een professionele racecarrière.",
+      image: `${SITE_URL}/og-image.jpg`,
+      memberOf: {
+        "@type": "SportsTeam",
+        name: "Team Levy Opbergen",
+      },
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Over Levy Opbergen | Kart Racing Talent"
+        description="Lees het verhaal, de missie en de trainingsaanpak van karttalent Levy Opbergen en ontdek zijn route naar de top."
+        path="/over-levy"
+        jsonLd={aboutJsonLd}
+      />
       <Header />
       <main className="pt-32 pb-24">
         <div className="container mx-auto px-4 max-w-5xl space-y-20">

@@ -7,12 +7,16 @@ import { Calendar, MapPin, ArrowLeft, Trophy } from "lucide-react";
 import { decodeHtml } from "@/lib/utils";
 import { useWordPressPostBySlug } from "@/hooks/use-wordpress";
 import type { WPPost } from "@/types/wordpress";
+import PageSeo from "@/components/seo/PageSeo";
+import { buildCanonical, SITE_URL } from "@/lib/seo";
 
 const extractFeaturedImage = (post: WPPost | null) => {
   if (!post?._embedded) return null;
   const media = (post._embedded["wp:featuredmedia"] as any)?.[0];
   return media?.source_url || null;
 };
+
+const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "");
 
 const formatDate = (date?: string) => {
   if (!date) return "Onbekende datum";
@@ -35,7 +39,7 @@ const extractTerms = (post: WPPost | null) => {
 };
 
 const NieuwsDetail = () => {
-  const { slug } = useParams();
+  const { slug, year } = useParams();
   const navigate = useNavigate();
 
   const { data: post, isLoading, isError } = useWordPressPostBySlug(slug ?? "");
@@ -46,8 +50,53 @@ const NieuwsDetail = () => {
   const circuit = post?.meta?.circuit ? decodeHtml(post.meta.circuit) : "Onbekend circuit";
   const position = post?.meta?.positie ? Number(post.meta.positie) : null;
 
+  const canonicalPath = year && slug ? `/nieuws/${year}/${slug}` : "/nieuws";
+  const title = post
+    ? `${decodeHtml(post.title.rendered)} | Wedstrijdverslag Levy Opbergen`
+    : "Wedstrijdverslag | Levy Opbergen";
+  const rawSummary = post?.meta?.samenvatting ?? post?.excerpt?.rendered ?? "";
+  const description = post
+    ? decodeHtml(stripHtml(String(rawSummary))) || "Lees het volledige wedstrijdverslag van Levy Opbergen."
+    : "Lees het wedstrijdverslag van Levy Opbergen.";
+
+  const articleJsonLd = post
+    ? {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: decodeHtml(post.title.rendered),
+        description,
+        datePublished: post.date,
+        dateModified: post.modified,
+        image: featuredImage ? [featuredImage] : [`${SITE_URL}/og-image.jpg`],
+        author: {
+          "@type": "Person",
+          name: "Levy Opbergen",
+        },
+        publisher: {
+          "@type": "Organization",
+          name: "Team Levy Opbergen",
+          logo: {
+            "@type": "ImageObject",
+            url: `${SITE_URL}/og-image.jpg`,
+          },
+        },
+        mainEntityOfPage: {
+          "@type": "WebPage",
+          "@id": buildCanonical(canonicalPath),
+        },
+      }
+    : undefined;
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title={title}
+        description={description}
+        path={canonicalPath}
+        type="article"
+        image={featuredImage ?? undefined}
+        jsonLd={articleJsonLd}
+      />
       <Header />
       <main className="pt-28 pb-20">
         <div className="container mx-auto px-4 max-w-4xl">

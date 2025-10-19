@@ -7,6 +7,8 @@ import { Calendar, MapPin, Clock, ArrowLeft } from "lucide-react";
 import { decodeHtml } from "@/lib/utils";
 import { useWordPressEventBySlug } from "@/hooks/use-wordpress";
 import type { WPEvent } from "@/types/wordpress";
+import PageSeo from "@/components/seo/PageSeo";
+import { buildCanonical } from "@/lib/seo";
 
 const extractFeaturedImage = (event: WPEvent | null) => {
   if (!event?._embedded) return null;
@@ -24,7 +26,7 @@ const formatDate = (date?: string) => {
 };
 
 const AgendaDetail = () => {
-  const { slug } = useParams();
+  const { slug, year } = useParams();
   const navigate = useNavigate();
 
   const { data: event, isLoading, isError } = useWordPressEventBySlug(slug ?? "");
@@ -36,9 +38,41 @@ const AgendaDetail = () => {
   const city = event?.meta?.stad ? decodeHtml(event.meta.stad) : "";
   const klasse = event?.meta?.klasse ? decodeHtml(event.meta.klasse) : "";
   const time = event?.meta?.tijd ? decodeHtml(event.meta.tijd) : "Tijd nog niet bekend";
+  const canonicalPath = year && slug ? `/agenda/${year}/${slug}` : "/agenda";
+  const description = event
+    ? `${formatDate(event.meta?.datum)} • ${location}${city ? ` (${city})` : ""}`
+    : "Bekijk details van dit evenement op de race agenda van Levy Opbergen.";
+
+  const eventJsonLd = event
+    ? {
+        "@context": "https://schema.org",
+        "@type": "SportsEvent",
+        name: decodeHtml(event.title.rendered),
+        startDate: event.meta?.datum ? new Date(event.meta.datum).toISOString() : undefined,
+        endDate: event.meta?.einddatum ? new Date(event.meta.einddatum).toISOString() : undefined,
+        eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+        eventStatus: "https://schema.org/EventScheduled",
+        location: {
+          "@type": "Place",
+          name: location,
+          address: address || city || undefined,
+        },
+        url: buildCanonical(canonicalPath),
+        description,
+        image: featuredImage ? [featuredImage] : undefined,
+      }
+    : undefined;
 
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title={event ? `${decodeHtml(event.title.rendered)} | Race Agenda Levy Opbergen` : "Race agenda evenement"}
+        description={description}
+        path={canonicalPath}
+        type="event"
+        image={featuredImage ?? undefined}
+        jsonLd={eventJsonLd}
+      />
       <Header />
       <main className="pt-28 pb-20">
         <div className="container mx-auto px-4 max-w-4xl">

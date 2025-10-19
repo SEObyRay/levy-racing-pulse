@@ -23,6 +23,7 @@ export interface WPBaseEntity {
 export interface WPPostMeta {
   circuit?: string | null;
   positie?: number | null;
+  samenvatting?: string | null;
   [key: string]: unknown;
 }
 
@@ -51,6 +52,7 @@ export interface WPEventMeta {
 
 export interface WPEvent extends WPBaseEntity {
   meta: WPEventMeta;
+  _embedded?: Record<string, unknown>;
 }
 
 export interface WPTaxonomyTerm {

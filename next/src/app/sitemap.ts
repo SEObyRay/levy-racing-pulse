@@ -55,35 +55,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   let postRoutes: MetadataRoute.Sitemap = [];
-  try {
-    const postsRes = await getWordPressPosts({ per_page: 100, order: "desc", orderby: "date" }, 600);
-    postRoutes = postsRes.items.map((post) => {
-      const year = new Date(post.date).getFullYear();
-      return {
-        url: `${SITE_URL}/nieuws/${year}/${post.slug}`,
-        lastModified: new Date(post.modified),
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching posts for sitemap:", error);
-  }
-
   let eventRoutes: MetadataRoute.Sitemap = [];
-  try {
-    const eventsRes = await getWordPressEvents({ per_page: 100, order: "asc" }, 600);
-    eventRoutes = eventsRes.items.map((event) => {
-      const year = new Date(event.meta?.datum || event.date).getFullYear();
-      return {
-        url: `${SITE_URL}/agenda/${year}/${event.slug}`,
-        lastModified: new Date(event.modified),
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      };
-    });
-  } catch (error) {
-    console.error("Error fetching events for sitemap:", error);
+  
+  // Only fetch WordPress data if API URL is configured
+  if (process.env.NEXT_PUBLIC_WP_API_URL) {
+    try {
+      const postsRes = await getWordPressPosts({ per_page: 100, order: "desc", orderby: "date" }, 600);
+      postRoutes = postsRes.items.map((post) => {
+        const year = new Date(post.date).getFullYear();
+        return {
+          url: `${SITE_URL}/nieuws/${year}/${post.slug}`,
+          lastModified: new Date(post.modified),
+          changeFrequency: "monthly" as const,
+          priority: 0.7,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching posts for sitemap:", error);
+    }
+
+    try {
+      const eventsRes = await getWordPressEvents({ per_page: 100, order: "asc" }, 600);
+      eventRoutes = eventsRes.items.map((event) => {
+        const year = new Date(event.meta?.datum || event.date).getFullYear();
+        return {
+          url: `${SITE_URL}/agenda/${year}/${event.slug}`,
+          lastModified: new Date(event.modified),
+          changeFrequency: "weekly" as const,
+          priority: 0.6,
+        };
+      });
+    } catch (error) {
+      console.error("Error fetching events for sitemap:", error);
+    }
   }
 
   return [...baseRoutes, ...postRoutes, ...eventRoutes];

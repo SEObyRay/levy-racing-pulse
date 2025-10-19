@@ -4,10 +4,32 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, MapPin, Calendar } from "lucide-react";
+import PageSeo from "@/components/seo/PageSeo";
+import { SITE_URL } from "@/lib/seo";
 
 const Contact = () => {
+  const contactJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ContactPage",
+    name: "Contact Levy Opbergen",
+    url: `${SITE_URL}/contact`,
+    mainEntity: {
+      "@type": "Organization",
+      name: "Team Levy Opbergen",
+      email: "info@levyopbergen.nl",
+      telephone: "+31 6 00 00 00 00",
+      areaServed: ["Netherlands", "Belgium", "Germany"],
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Contact | Team Levy Opbergen"
+        description="Neem contact op met het team van Levy Opbergen voor sponsoring, media of testdagen."
+        path="/contact"
+        jsonLd={contactJsonLd}
+      />
       <Header />
       <main className="pt-32 pb-20">
         <div className="container mx-auto px-4 max-w-5xl space-y-16">

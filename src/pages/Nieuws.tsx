@@ -8,6 +8,8 @@ import { Calendar, MapPin, ArrowRight } from "lucide-react";
 import { useWordPressPosts, useWordPressTaxonomy } from "@/hooks/use-wordpress";
 import { decodeHtml } from "@/lib/utils";
 import type { WPPost } from "@/types/wordpress";
+import PageSeo from "@/components/seo/PageSeo";
+import { buildCanonical } from "@/lib/seo";
 
 const stripHtml = (html: string) => html.replace(/<[^>]*>/g, "");
 
@@ -80,6 +82,18 @@ const Nieuws = () => {
     });
   }, [posts, selectedYear, selectedCompetition]);
 
+  const itemListElements = useMemo(() => {
+    return filteredNews.slice(0, 20).map((post, index) => {
+      const postYear = new Date(post.date).getFullYear();
+      return {
+        "@type": "ListItem",
+        position: index + 1,
+        url: buildCanonical(`/nieuws/${postYear}/${post.slug}`),
+        name: decodeHtml(post.title.rendered),
+      };
+    });
+  }, [filteredNews]);
+
   const getCompetitionLabel = (post: WPPost) => {
     const competitionIds = post.competitie ?? [];
     for (const id of competitionIds) {
@@ -89,8 +103,27 @@ const Nieuws = () => {
     return "";
   };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Wedstrijdverslagen van Levy Opbergen",
+    description:
+      "Overzicht van alle race verslagen, resultaten en verhalen van kart coureur Levy Opbergen.",
+    url: buildCanonical("/nieuws"),
+    mainEntity: {
+      "@type": "ItemList",
+      itemListElement: itemListElements,
+    },
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Wedstrijdverslagen | Levy Opbergen"
+        description="Lees alle wedstrijdverslagen, resultaten en verhalen van kart coureur Levy Opbergen."
+        path="/nieuws"
+        jsonLd={jsonLd}
+      />
       <Header />
       <main className="pt-32 pb-20">
         <div className="container mx-auto px-4">

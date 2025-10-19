@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Handshake, Users, Gift, Trophy } from "lucide-react";
+import PageSeo from "@/components/seo/PageSeo";
+import { SITE_URL } from "@/lib/seo";
 
 const benefits = [
   {
@@ -57,8 +59,36 @@ const contributionTiers = [
 ];
 
 const ClubVan100 = () => {
+  const offerCatalogJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "OfferCatalog",
+    name: "Club van 100 Partnerships",
+    url: `${SITE_URL}/club-van-100`,
+    provider: {
+      "@type": "SportsTeam",
+      name: "Team Levy Opbergen",
+    },
+    itemListElement: contributionTiers.map((tier, index) => ({
+      "@type": "Offer",
+      position: index + 1,
+      name: tier.title,
+      description: tier.perks.join(", "),
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        priceCurrency: "EUR",
+        price: Number(tier.amount.replace(/[^0-9]/g, "")) || undefined,
+      },
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <PageSeo
+        title="Club van 100 | Steun Levy Opbergen"
+        description="Word lid van de Club van 100 en steun Levy Opbergen met trainingen, races en internationale ambities."
+        path="/club-van-100"
+        jsonLd={offerCatalogJsonLd}
+      />
       <Header />
       <main className="pt-32 pb-24">
         <div className="container mx-auto px-4 max-w-5xl space-y-20">
